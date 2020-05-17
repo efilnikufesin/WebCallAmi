@@ -3,6 +3,7 @@ import LoginForm from './LoginForm';
 import SignupForm from './SignupForm';
 import './App.css';
 import Index from './Index';
+import Cookies from 'universal-cookie';
 
 class StartPage extends Component {
   constructor(props) {
@@ -30,8 +31,8 @@ class StartPage extends Component {
   }
 
   handle_login = (e, data) => {
+    const cookies = new Cookies();
     e.preventDefault();
-    console.log(data.callbackNum, this.props, this.state);
     fetch('token-auth/', {
       method: 'POST',
       headers: {
@@ -42,14 +43,25 @@ class StartPage extends Component {
       .then(res => res.json())    //set invalid data here?
       .then(json => {
         localStorage.setItem('token', json.token);
+        fetch('session/', {
+        method: 'POST',
+        headers:
+        {"Content-Type":"application/json", "Authorization": `JWT ${json.token}`, "X-CSRFToken": cookies.get("csrftoken")},
+        body: JSON.stringify({'callbackNum':data.callbackNum})
+        });
         this.setState({
           logged_in: true,
           displayed_form: '',
           username: json.user.username,
-          callbacknNum: data.callbackNum,
+          callbackNum: data.callbackNum,
         });
       });
-    console.log('result', this.state);
+    //fetch('session/', {
+      //  method: 'POST',
+        //headers: 
+       // {"Content-Type":"application/json", "Authorization": `JWT ${localStorage.getItem('token')}`},
+       // body: JSON.stringify({'callbackNum':data.callbackNum})
+   // });
   };
 
   handle_signup = (e, data) => {
@@ -101,7 +113,23 @@ class StartPage extends Component {
       <LoginForm handle_login={this.handle_login} />
     );
 
+
+//   if (this.state.callbackNum !==''){
+//   const logged_in_nav = (<Index callbackNum={this.state.callbackNum}/>);
+//   }
+
     const logged_in_nav = (<Index callbackNum={this.state.callbackNum}/>);
+
+//  {this.state.logged_in ? logged_in_nav : logged_out_nav}
+
+//     let ifLog;
+
+//     if (this.state.logged_in == true) {
+ //    ifLog = (<Index callbackNum={this.state.callbackNum}/>)
+   //  } else {
+    // ifLog = logged_out_nav
+     //}
+
 
     return (
       <div className="App">

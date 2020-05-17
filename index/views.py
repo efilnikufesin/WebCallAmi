@@ -1,6 +1,9 @@
 from django.shortcuts import render
 
 # Create your views here.
+import os
+from django.http import HttpResponse
+from panoramisk.call_manager import CallManager
 from .models import Test, Contact
 from .serializers import TestSerializer, ContactSerializer, UserSerializer, UserSerializerWithToken
 from rest_framework import generics
@@ -10,6 +13,7 @@ from rest_framework import permissions, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
+import asyncio
 
 class LeadListCreate(generics.ListCreateAPIView):
     queryset = Test.objects.all()
@@ -51,3 +55,38 @@ class UserList(APIView):
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+def session(request):
+    if request.method == 'POST':
+        cb = request.POST.get("callbackNum")
+        request.session['cb_number'] = str(cb)
+        return HttpResponse("Your callback number is set")
+
+def call(request):
+    if request.method == 'POST':
+        digs = request.POST.get("callDigs")
+        cbnum = request.session['cb_number']
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(originate(digs, cbnum))
+        return HttpResponse("Called")
+    else:
+        pass
+
+@asyncio.coroutine
+def originate(digs, cbnum):
+    ch = str('SIP'+'/'+cbnum+'@806889')
+    os.chdir('/home/chief/area/caller/')
+    conf_file = 'config'
+    callmanager = CallManager.from_config(conf_file)
+    yield from callmanager.connect()
+    call = yield from callmanager.send_originate({
+        'Action': 'Originate',
+        'Channel': ch,
+        'WaitTime': 20,
+        'CallerID': '',
+        'Exten': digs,
+        'Context': 'city',
+        'Priority': 1})
+    #print(call)
+    #callmanager.clean_originate(call)
+    callmanager.close()
