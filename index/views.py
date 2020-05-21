@@ -1,6 +1,8 @@
 from django.shortcuts import render
 
 # Create your views here.
+import json
+from panoramisk import Manager
 import os
 from django.http import HttpResponse
 from panoramisk.call_manager import CallManager
@@ -58,17 +60,31 @@ class UserList(APIView):
 
 def session(request):
     if request.method == 'POST':
-        cb = request.POST.get("callbackNum")
+        js_data = json.loads(request.body.decode())
+        cb = js_data['callbackNum']
         request.session['cb_number'] = str(cb)
-        return HttpResponse("Your callback number is set")
+        return HttpResponse("Your callback number is set: " + str(cb) + str(js_data))
 
 def call(request):
     if request.method == 'POST':
-        digs = request.POST.get("callDigs")
+        #digs = request.POST.get('callDigs')
+        js_data = json.loads(request.body.decode())
+        digs = js_data['callDigs']
         cbnum = request.session['cb_number']
         loop = asyncio.get_event_loop()
         loop.run_until_complete(originate(digs, cbnum))
-        return HttpResponse("Called")
+        return HttpResponse("Called: " + str(digs) + str(cbnum))
+    else:
+        pass
+
+def answerCall(request):
+    if request.method == 'POST':
+        js_data = json.loads(request.body.decode())
+        channel = js_data['channel']
+        cbnum = request.session['cb_number']
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(transfer(channel, cbnum))
+        return HttpResponse("Called: " + str(channel) + str(cbnum))
     else:
         pass
 
@@ -90,3 +106,22 @@ def originate(digs, cbnum):
     #print(call)
     #callmanager.clean_originate(call)
     callmanager.close()
+
+
+@asyncio.coroutine
+def transfer(channel, cbnum):
+    #ch = str('SIP'+'/'+cbnum+'@806889')
+    os.chdir('/home/chief/area/caller/')
+    conf_file = 'config'
+    callmanager = CallManager.from_config(conf_file)
+    yield from callmanager.connect()
+    call = yield from callmanager.send_originate({
+        'Action': 'Redirect',
+        'Channel': channel,
+        'WaitTime': 20,
+        'CallerID': '',
+        'Exten': cbnum,
+        'Context': 'zadarma-in',
+        'Priority': 1})
+    #print(call)
+    #callmanager.clean_originate(call)
