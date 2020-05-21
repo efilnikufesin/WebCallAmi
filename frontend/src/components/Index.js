@@ -16,7 +16,7 @@ class Index extends Component {
 
     this.state = {
       eventLoaded: false,
-      event: [],
+      event,
       stopPoll: false,
       isDrop: true,
       phones: [],
@@ -88,11 +88,13 @@ class Index extends Component {
   subscribeToEvt = socket => {
         console.log('subscribing');
         socket.on('eventClient', event => {
+                                  if ((event.Exten !== 's') && (event.Event == 'Newchannel')) {
                                      this.setState({
-                                     event: [event],
+                                     event: event,
                                      eventLoaded: true,
                                          });
                                      console.log(this.state.event, 'EVENT')
+                                     }
                                      });
       }
 
@@ -101,7 +103,7 @@ class Index extends Component {
     this.loadContacts(this.state.userInput);
     this.loadPhones(this.state.choice);
     } else { console.log('didmount statement failed', this.props);
-      const  socket = openSocket('http://178.62.229.130:8000');
+      const  socket = openSocket(myserver);
       this.subscribeToEvt(socket);
     }
   }
@@ -183,6 +185,21 @@ class Index extends Component {
    })
   };
   
+  answer = e => {
+  
+  const cookies = new Cookies();
+//  if(this.state.event.Exten !== this.state.event.CallerIDNum) {
+    fetch("answerCall/", {
+      method: 'post',
+      headers: {"Content-Type":"application/json", "Authorization": `JWT ${localStorage.getItem('token')}`, "X-CSRFToken": cookies.get("csrftoken")},
+      body: JSON.stringify({
+    "channel": this.state.event.Channel,
+    })
+   });
+   console.log(this.state.event.Channel);
+ //   }
+  }
+
   callIt = e => {
   const cookies = new Cookies();
     fetch("call/", {
@@ -190,7 +207,7 @@ class Index extends Component {
       headers: {"Content-Type":"application/json", "Authorization": `JWT ${localStorage.getItem('token')}`, "X-CSRFToken": cookies.get("csrftoken")},
       body: JSON.stringify({
     "callDigs": e.currentTarget.textContent,
-    "callbackNum": this.props.callbackNum,
+    //"callbackNum": this.props.callbackNum,
     })
    });
   };
@@ -209,6 +226,7 @@ class Index extends Component {
       onClickCreate,
       showBarCreate,
       showBar,
+      answer,
       logOut,
       state: {
         eventLoaded,
@@ -232,18 +250,10 @@ class Index extends Component {
     let eventPoller;
 
       if (eventLoaded == true) {
-        eventPoller = (
-        <div className="event-handler">
-          {this.state.event.map((events, index) => {
-                return (
-                       <div id="event-handler-item" key={index}>
-                       {events.Event}
-                       </div>
-                       )
-            }
-          )}
-        </div>
-        )
+         eventPoller = (
+             <div className="event-handler">
+                 {this.state.event.ConnectedLineNum} <button id="answer-btn" onClick={answer} value="Answer call"></button>
+             </div>)
       }
 
       if (showSuggestions) {
