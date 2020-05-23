@@ -103,8 +103,6 @@ def originate(digs, cbnum):
         'Exten': digs,
         'Context': 'city',
         'Priority': 1})
-    #print(call)
-    #callmanager.clean_originate(call)
     callmanager.close()
 
 
@@ -123,5 +121,4 @@ def transfer(channel, cbnum):
         'Exten': cbnum,
         'Context': 'zadarma-in',
         'Priority': 1})
-    #print(call)
-    #callmanager.clean_originate(call)
+    callmanager.close()
