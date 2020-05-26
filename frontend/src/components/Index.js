@@ -2,19 +2,20 @@ import React, { Component, Fragment } from "react";
 import PropTypes from "prop-types";
 import Cookies from 'universal-cookie';
 import openSocket from 'socket.io-client';
+import IncomingCalls from './IncomingCalls';
 
 class Index extends Component {
 
   static defaultProps = {
-    choice: "",
-    callbackNum: "",
-    isLogin: false,
+//    choice: "",
+//    isLogin: false,
   };
 
   constructor(props) {
     super(props);
 
     this.state = {
+      answered: false,
       eventLoaded: false,
       event,
       stopPoll: false,
@@ -31,71 +32,86 @@ class Index extends Component {
     };
   }
 
-
   createNewContact = e => {
-    fetch("api/contacts/?create", {
-      method: 'post',
-      headers: {"Content-Type":"application/json", "Authorization": `JWT ${localStorage.getItem('token')}`},
-      body: {
-    "name": this.state.Name,
-    "number_primary": this.state.nPrimary,
-    "number_secondary": this.state.nSecondary,
-    "number_additional": this.state.nAdditional,
-    }
-   });
+  fetch("api/contacts/?create", {
+    method: 'post',
+    headers: {
+              "Content-Type": "application/json",
+              "Authorization": `JWT ${localStorage.getItem('token')}`
+             },
+              body: {
+                     "name": this.state.Name,
+                     "number_primary": this.state.nPrimary,
+                     "number_secondary": this.state.nSecondary,
+                     "number_additional": this.state.nAdditional,
+             }
+        });
   };
-
 
   loadPhones = e => {
     fetch("api/contacts/?view=" + e, {
-    headers: {
-          "Authorization": `JWT ${localStorage.getItem('token')}`
-        }})
+      headers: {
+        "Authorization": `JWT ${localStorage.getItem('token')}`
+        }
+      })
     .then(response => response.json())
     .then(items => items.forEach((item, index, array) =>{
-    const phoneList = [item.number_primary, item.number_secondary, item.number_additional];
-    this.setState({phones: phoneList, isLoading: true, loaded: true});
-    })); 
+      const phoneList = [item.number_primary, item.number_secondary, item.number_additional];
+      this.setState({
+        phones: phoneList, isLoading: true, loaded: true});
+      })
+    );
    };
 
   loadContacts = e => {
-  if (e!==""){
-    const name = [];
-    fetch("api/contacts/?q=" + this.state.userInput, {
-    headers: {
+    if (e!==""){
+      const name = [];
+      fetch("api/contacts/?q=" + this.state.userInput, {
+        headers: {
           "Authorization": `JWT ${localStorage.getItem('token')}`
-        }})
-   .then(response => { if (response.status == 401) {
-                                                    localStorage.removeItem('token');
-                                                    window.location.reload();
-                                                   } else {
-                                                   return response.json()
-                                                   }
-                     })
-   .then(data => {
-          if (data.length) {
-            data.forEach((item, index, array) => {
-            name.push(item.name);
-            this.setState({suggestions: name, stopPoll: true, isDrop: true})
-        })} else {
-                 this.setState(
-                   {suggestions: undefined, stopPoll: true, isDrop: true}
-                )}
+        }
+      })
+     .then(response => { 
+       if (response.status == 401) {
+         localStorage.removeItem('token');
+         window.location.reload();
+         } else {
+           return response.json()
+           }
+      })
+  .then(data => {
+    if (data.length) {
+      data.forEach((item, index, array) => {
+        name.push(item.name);
+        this.setState({
+          suggestions: name, 
+          stopPoll: true, 
+          isDrop: true
+        })
+       })
+      } else {
+        this.setState({
+          suggestions: undefined, 
+          stopPoll: true, 
+          isDrop: true
           })
-   }
+        }
+      }
+  )}
   };
 
   subscribeToEvt = socket => {
-        console.log('subscribing');
-        socket.on('eventClient', event => {
-                                  if ((event.Exten !== 's') && (event.Event == 'Newchannel')) {
-                                     this.setState({
-                                     event: event,
-                                     eventLoaded: true,
-                                         });
-                                     console.log(this.state.event, 'EVENT')
-                                     }
-                                     });
+    console.log('subscribing');
+    socket.on('eventClient', event => {
+      if ((event.Exten !== 's') && (event.Event == 'Newchannel')) {
+        this.setState({
+          event: event,
+          eventLoaded: true,
+          answered: false,
+        });
+        console.log(this.state.event, 'EVENT')
+        }
+      });
       }
 
   componentDidMount() {
@@ -103,22 +119,22 @@ class Index extends Component {
     this.loadContacts(this.state.userInput);
     this.loadPhones(this.state.choice);
     } else { console.log('didmount statement failed', this.props);
-      const  socket = openSocket(myserver);
+      const  socket = openSocket('http://178.62.229.130:8000');
       this.subscribeToEvt(socket);
     }
   }
 
   componentDidUpdate(prevProps, prevState) {
     if (this.state.isDrop==false) {
-        this.loadContacts(this.state.userInput);
+      this.loadContacts(this.state.userInput);
     }
     if (this.state.isLoading==false) {
-        this.loadPhones(this.state.choice);
+      this.loadPhones(this.state.choice);
     }
   }
-  
+
   onChange = e => {
-   const userInput = e.currentTarget.value;
+    const userInput = e.currentTarget.value;
 
     this.setState({
       stopPoll: true,
@@ -127,16 +143,16 @@ class Index extends Component {
       //activeSuggestion: 0,
       showSuggestions: true,
       userInput: e.currentTarget.value,
-    });
+      });
     console.log(this.props, 'test');
   }
-  
+
   showBarCreate = e => {
     if (this.state.activeBarCreate == "active") {
       this.setState({
-        activeBarCreate: ""})
-    }
-    else {
+        activeBarCreate: ""
+      })
+    } else {
       this.setState({
         activeBarCreate: "active"})
     }
@@ -150,14 +166,15 @@ class Index extends Component {
   showBar = e => {
     if (this.state.activeBar == "active") {
       this.setState({
-        activeBar: ""})
-    }
-    else {
-      this.setState({
-        activeBar: "active"})
+        activeBar: ""
+        })
+    } else {
+        this.setState({
+          activeBar: "active"
+          })
     }
   }
-  
+
   createContact = e => {
     this.setState({
       Name: '',
@@ -170,35 +187,20 @@ class Index extends Component {
   onClickCreate = e => {
     console.log('Create click');
     this.setState({
-    activeBarCreate: "",
-    });
- } 
+      activeBarCreate: "",
+      });
+ }
 
   onClick = e => {
-   const prevchoice = this.state.choice;
-   const text = e.currentTarget.textContent;
-   this.setState({
-    prevchoice,
-    isLoading: false,
-    choice: text,
-    activeBar: "",
-   })
+    const prevchoice = this.state.choice;
+    const text = e.currentTarget.textContent;
+    this.setState({
+      prevchoice,
+      isLoading: false,
+      choice: text,
+      activeBar: "",
+      })
   };
-  
-  answer = e => {
-  
-  const cookies = new Cookies();
-//  if(this.state.event.Exten !== this.state.event.CallerIDNum) {
-    fetch("answerCall/", {
-      method: 'post',
-      headers: {"Content-Type":"application/json", "Authorization": `JWT ${localStorage.getItem('token')}`, "X-CSRFToken": cookies.get("csrftoken")},
-      body: JSON.stringify({
-    "channel": this.state.event.Channel,
-    })
-   });
-   console.log(this.state.event.Channel);
- //   }
-  }
 
   callIt = e => {
   const cookies = new Cookies();
@@ -206,13 +208,12 @@ class Index extends Component {
       method: 'post',
       headers: {"Content-Type":"application/json", "Authorization": `JWT ${localStorage.getItem('token')}`, "X-CSRFToken": cookies.get("csrftoken")},
       body: JSON.stringify({
-    "callDigs": e.currentTarget.textContent,
-    //"callbackNum": this.props.callbackNum,
-    })
+        "callDigs": e.currentTarget.textContent,
+        })
    });
   };
 
-   
+
 
   render() {
 
@@ -226,10 +227,8 @@ class Index extends Component {
       onClickCreate,
       showBarCreate,
       showBar,
-      answer,
       logOut,
       state: {
-        eventLoaded,
         suggestions,
         stopPoll,
         isDrop,
@@ -247,14 +246,15 @@ class Index extends Component {
 
     let suggestionsListComponent;
     let phonesListComponent;
+    let rring = new Audio('static/frontend/ring.mp3');
     let eventPoller;
 
-      if (eventLoaded == true) {
-         eventPoller = (
-             <div className="event-handler">
-                 {this.state.event.ConnectedLineNum} <button id="answer-btn" onClick={answer} value="Answer call"></button>
-             </div>)
-      }
+    if (this.state.eventLoaded == true) {
+      eventPoller = (
+        <IncomingCalls CallerID={this.state.event.CallerIDNum} Channel={this.state.event.Channel} />
+      )
+    }
+    
 
       if (showSuggestions) {
       if (typeof this.state.suggestions!='undefined') {
@@ -275,7 +275,7 @@ class Index extends Component {
             })}
           </ul>
         );
-      } 
+      }
       if (loaded == true){
       phonesListComponent = (
       <ul className="phones">
@@ -297,7 +297,7 @@ class Index extends Component {
 
     return (
       <Fragment>
-  {eventPoller}
+  { eventPoller }
   <div className="wrapper">
         <nav id="sidebar" className={this.state.activeBar}>
                    <h3>Contact info</h3>
@@ -325,7 +325,7 @@ class Index extends Component {
                                 <span>Create contact<sup>beta</sup></span>
                         </button>
                 </div>
-    
+
         </nav>
    {suggestionsListComponent}
   </div>
