@@ -14,9 +14,19 @@ class IncomingCalls extends Component {
 
     this.state = {
       answered: false,
-      eventLoaded: false,
     };
   }
+
+
+    audio = new Audio('static/frontend/ring.mp3')
+    componentDidMount() {
+      this.audio.loop = true
+      this.audio.play()
+    }
+
+    componentWillUnmount() {
+      this.audio.pause();  
+    }
 
     answer = e => {
     this.setState({
@@ -30,18 +40,18 @@ class IncomingCalls extends Component {
         "channel": this.props.Channel,
         })
      });
-    console.log(this.props.Channel);
   }
 
 
   render() {
 
   const {answer} = this;
-  
+
     return (
-    <div className="event-handler">
+
+      <div className="event-handler">
                  {this.props.CallerID} <button id="answer-btn" onClick={answer} value="Answer call"></button>
-    </div>
+      </div>
     )
 
   }
